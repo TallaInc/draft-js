@@ -307,13 +307,14 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
     const {
       blockRenderMap,
       blockRendererFn,
+      blockStructureFn,
       blockStyleFn,
       customStyleFn,
       customStyleMap,
       editorState,
       readOnly,
       textAlignment,
-      textDirectionality,
+      textDirectionality, 
     } = this.props;
 
     const rootClass = cx({
@@ -344,6 +345,7 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
     const editorContentsProps = {
       blockRenderMap,
       blockRendererFn,
+      blockStructureFn,
       blockStyleFn,
       customStyleMap: {
         ...DefaultDraftInlineStyle,

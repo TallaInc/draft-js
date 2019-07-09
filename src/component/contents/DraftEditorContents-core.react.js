@@ -127,6 +127,7 @@ class DraftEditorContents extends React.Component<Props> {
     const {
       blockRenderMap,
       blockRendererFn,
+      blockStructureFn,
       blockStyleFn,
       customStyleMap,
       customStyleFn,
@@ -142,7 +143,7 @@ class DraftEditorContents extends React.Component<Props> {
     const directionMap = nullthrows(editorState.getDirectionMap());
 
     const blocksAsArray = content.getBlocksAsArray();
-    const processedBlocks = [];
+    let processedBlocks = [];
 
     let currentDepth = null;
     let lastWrapperTemplate = null;
@@ -233,6 +234,7 @@ class DraftEditorContents extends React.Component<Props> {
         wrapperTemplate,
         key,
         offsetKey,
+        blockType,
       });
 
       if (wrapperTemplate) {
@@ -242,6 +244,9 @@ class DraftEditorContents extends React.Component<Props> {
       }
       lastWrapperTemplate = wrapperTemplate;
     }
+
+    if(blockStructureFn)
+      processedBlocks = blockStructureFn(processedBlocks)
 
     // Group contiguous runs of blocks that have the same wrapperTemplate
     const outputBlocks = [];

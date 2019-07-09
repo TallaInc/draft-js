@@ -1,0 +1,193 @@
+<!--
+Copyright (c) 2013-present, Facebook, Inc. All rights reserved.
+
+This file provided by Facebook is for non-commercial testing and evaluation
+purposes only. Facebook reserves all rights not expressly granted.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Draft • Entity Editor</title>
+    <link rel="stylesheet" href="../../../dist/Draft.css" />
+  </head>
+  <body>
+    <div id="target"></div>
+    <script src="../../../node_modules/react/umd/react.development.js"></script>
+    <script src="../../../node_modules/react-dom/umd/react-dom.development.js"></script>
+    <script src="../../../node_modules/immutable/dist/immutable.js"></script>
+    <script src="../../../node_modules/es6-shim/es6-shim.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.js"></script>
+    <script src="../../../dist/Draft.js"></script>
+    <script type="text/babel">
+      'use strict';
+
+      const {
+        convertFromRaw,
+        convertToRaw,
+        CompositeDecorator,
+        ContentState,
+        Editor,
+        EditorState,
+        DefaultDraftBlockRenderMap,
+      } = Draft;
+
+      const rawContent = {
+        blocks: [
+          {
+            text: 'Content of the list',
+            type: 'nest',
+            entityRanges: [],
+          },
+          {
+            text: 'Content of P nested in list',
+            type: 'nest/unstyled',
+          },
+          {
+            text: 'More content of P nested in list',
+            type: 'nest/unstyled',
+            entityRanges: [],
+          },
+          {
+            text: 'Content of second level nested list',
+            type: 'nest/nest',
+            entityRanges: [],
+          },
+          {
+            text: 'Content of P in second level nest',
+            type: 'nest/nest/unstyled',
+            entityRanges: [],
+          },
+        ],
+
+        entityMap: {
+        },
+      };
+
+      const Nest = (props) => {
+        return <ul style={styles.nest}>{props.children}</ul>
+      }
+
+
+      class EntityEditorExample extends React.Component {
+        constructor(props) {
+          super(props);
+
+          this.blockRenderMap = Immutable.Map({
+            "nest": {
+              wrapper: <Nest />,
+              element: "li",
+            },
+            "nest/nest": {
+              wrapper: <Nest />,
+              element: "li",
+            },
+          }).merge(DefaultDraftBlockRenderMap)
+
+          const decorator = new CompositeDecorator([
+          ]);
+
+          const blocks = convertFromRaw(rawContent);
+
+          this.state = {
+            editorState: EditorState.createWithContent(blocks, decorator),
+          };
+
+          this.focus = () => this.refs.editor.focus();
+          this.onChange = (editorState) => this.setState({editorState});
+          this.logState = () => {
+            const content = this.state.editorState.getCurrentContent();
+            console.log(convertToRaw(content));
+          };
+        }
+
+
+        // Recursively take this block and all of its children
+        renderBlockWithChildren(blk, rest) {
+          let childBlocks = []
+          let child
+
+          while(rest.length > 0) {
+            if(!rest[0].blockType.startsWith(blk.blockType + "/"))
+              break;
+
+            [child, rest] = this.renderBlockWithChildren(rest[0], rest.slice(1))
+
+            childBlocks.push(child.block)
+          }
+
+          blk.block = React.cloneElement(blk.block, blk.block.props, [blk.block.props.children, ...childBlocks])
+
+          return [blk, rest.slice(childBlocks.length)]
+        }
+
+        blockStructureFn(blocks) {
+          let blk
+          let structured = []
+
+          // Keep taking a block and its children until nothing left
+          while(blocks.length > 0) {
+            [blk, blocks] = this.renderBlockWithChildren(blocks[0], blocks.slice(1))
+            structured.push(blk)
+          }
+
+          return structured
+        }
+
+        render() {
+          return (
+            <div style={styles.root}>
+              <div style={styles.editor} onClick={this.focus}>
+                <Editor
+                  blockStructureFn={this.blockStructureFn.bind(this)}
+                  blockRenderMap={this.blockRenderMap}
+                  editorState={this.state.editorState}
+                  onChange={this.onChange}
+                  placeholder="Enter some text..."
+                  ref="editor"
+                />
+              </div>
+              <p style={styles.text}>
+                {JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()))}
+              </p>
+            </div>
+          );
+        }
+      }
+
+      const styles = {
+        root: {
+          fontFamily: '\'Helvetica\', sans-serif',
+          padding: 20,
+          width: 600,
+        },
+        editor: {
+          border: '1px solid #ccc',
+          cursor: 'text',
+          minHeight: 80,
+          padding: 10,
+        },
+        button: {
+          marginTop: 10,
+          textAlign: 'center',
+        },
+        nest: {
+          margin: '10px',
+          border: '1px solid #333'
+        }
+      };
+
+      ReactDOM.render(
+        <EntityEditorExample />,
+        document.getElementById('target')
+      );
+    </script>
+  </body>
+</html>
